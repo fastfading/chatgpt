@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	gpt3 "github.com/PullRequestInc/go-gpt3"
+	gpt3 "github.com/fastfading/go-gpt3"
 	"github.com/spf13/cobra"
 )
 
@@ -20,11 +20,13 @@ func GetResponse(client gpt3.Client, ctx context.Context, quesiton string) {
 		MaxTokens:   gpt3.IntPtr(3000),
 		Temperature: gpt3.Float32Ptr(0),
 	}, func(resp *gpt3.CompletionResponse) {
-		fmt.Print(resp.Choices[0].Text)
+		if len(resp.Choices) > 0 {
+			fmt.Print(resp.Choices[0].Text)
+		}
 	})
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(13)
+		// os.Exit(13)
 	}
 	fmt.Printf("\n")
 }
@@ -50,7 +52,8 @@ func main() {
 			quit := false
 
 			for !quit {
-				fmt.Print("輸入你的問題(quit 離開): ")
+				// fmt.Print("Question (enter:'quit' to quit): \n")
+				fmt.Print(">")
 
 				if !scanner.Scan() {
 					break
