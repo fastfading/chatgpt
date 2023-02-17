@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bufio"
+	// "bufio"
 	"context"
 	"fmt"
 	"log"
@@ -10,6 +10,11 @@ import (
 
 	gpt3 "github.com/fastfading/go-gpt3"
 	"github.com/spf13/cobra"
+
+	htgotts "github.com/hegedustibor/htgo-tts"
+	handlers "github.com/hegedustibor/htgo-tts/handlers"
+	voices "github.com/hegedustibor/htgo-tts/voices"
+	"github.com/peterh/liner"
 )
 
 func GetResponse(client gpt3.Client, ctx context.Context, quesiton string) {
@@ -17,11 +22,13 @@ func GetResponse(client gpt3.Client, ctx context.Context, quesiton string) {
 		Prompt: []string{
 			quesiton,
 		},
-		MaxTokens:   gpt3.IntPtr(3000),
+		MaxTokens:   gpt3.IntPtr(2000),
 		Temperature: gpt3.Float32Ptr(0),
 	}, func(resp *gpt3.CompletionResponse) {
 		if len(resp.Choices) > 0 {
-			fmt.Print(resp.Choices[0].Text)
+			txt := resp.Choices[0].Text
+			fmt.Print(txt)
+			BufferText(txt)
 		}
 	})
 	if err != nil {
@@ -29,6 +36,17 @@ func GetResponse(client gpt3.Client, ctx context.Context, quesiton string) {
 		// os.Exit(13)
 	}
 	fmt.Printf("\n")
+}
+
+var bufStr string
+
+func BufferText(txt string) {
+	bufStr += txt
+	if txt == "." || txt == "!" || txt == "?" {
+		fmt.Println("")
+		speak(bufStr)
+		bufStr = ""
+	}
 }
 
 type NullWriter int
@@ -42,24 +60,34 @@ func main() {
 		panic("Missing API KEY")
 	}
 
+	line := liner.NewLiner()
+	defer line.Close()
+
+	line.SetCtrlCAborts(true)
+
 	ctx := context.Background()
 	client := gpt3.NewClient(apiKey)
 	rootCmd := &cobra.Command{
 		Use:   "chatgpt",
 		Short: "Chat with ChatGPT in console.",
 		Run: func(cmd *cobra.Command, args []string) {
-			scanner := bufio.NewScanner(os.Stdin)
+			// scanner := bufio.NewScanner(os.Stdin)
 			quit := false
 
 			for !quit {
 				// fmt.Print("Question (enter:'quit' to quit): \n")
-				fmt.Print(">")
+				// fmt.Print(">")
 
-				if !scanner.Scan() {
+				// if !scanner.Scan() {
+				// 	break
+				// }
+
+				// question := scanner.Text()
+				var question string
+				var err error
+				if question, err = line.Prompt(">"); err != nil {
 					break
 				}
-
-				question := scanner.Text()
 				questionParam := validateQuestion(question)
 				switch questionParam {
 				case "quit":
@@ -86,4 +114,19 @@ func validateQuestion(question string) string {
 		}
 	}
 	return quest
+}
+
+func savemp3(str string) {
+	speech := htgotts.Speech{Folder: "audio", Language: voices.English}
+	speech.Speak(str)
+}
+
+func speak(str string) {
+	speech := htgotts.Speech{Folder: "audio", Language: voices.English, Handler: &handlers.MPlayer{}}
+	speech.Speak(str)
+}
+
+func nativespeak(str string) {
+	speech := htgotts.Speech{Folder: "audio", Language: voices.English, Handler: &handlers.Native{}}
+	speech.Speak(str)
 }
